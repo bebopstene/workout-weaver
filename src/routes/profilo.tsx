@@ -1,7 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Dumbbell, RotateCcw, Timer, TrendingUp } from "lucide-react";
+import { useRef } from "react";
+import { Download, Dumbbell, RotateCcw, Timer, TrendingUp, Upload } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { doneSets, fmtNum, personalRecords, resetAll, sessionVolume, streak, useGym } from "@/lib/gym-store";
+import {
+  doneSets,
+  fmtNum,
+  importState,
+  personalRecords,
+  resetAll,
+  sessionVolume,
+  streak,
+  useGym,
+} from "@/lib/gym-store";
+import { exportCsv, exportJson } from "@/lib/export";
 
 export const Route = createFileRoute("/profilo")({
   head: () => ({
@@ -9,7 +20,8 @@ export const Route = createFileRoute("/profilo")({
       { title: "Profilo atleta — Iron Pulse" },
       {
         name: "description",
-        content: "Statistiche complessive dell'atleta: sessioni, volume totale, serie e streak di allenamento.",
+        content:
+          "Statistiche complessive dell'atleta: sessioni, volume totale, serie e streak di allenamento.",
       },
       { property: "og:title", content: "Profilo atleta — Iron Pulse" },
       { property: "og:description", content: "Sessioni, volume totale, serie e streak." },
@@ -19,8 +31,26 @@ export const Route = createFileRoute("/profilo")({
 });
 
 function Profilo() {
-  const { history } = useGym();
+  const state = useGym();
+  const { history } = state;
+  const fileRef = useRef<HTMLInputElement>(null);
   const volume = history.reduce((t, s) => t + sessionVolume(s), 0);
+
+  const onImport = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(String(reader.result));
+      } catch {
+        window.alert("File non valido: non è un JSON leggibile.");
+        return;
+      }
+      const error = importState(parsed);
+      window.alert(error ?? "Backup importato.");
+    };
+    reader.readAsText(file);
+  };
   const sets = history.reduce((t, s) => t + doneSets(s), 0);
   const minutes = history.reduce(
     (t, s) => t + (s.finishedAt ? (s.finishedAt - s.startedAt) / 60000 : 0),
@@ -76,22 +106,89 @@ function Profilo() {
       </section>
 
       <section className="mt-10 px-4">
+        <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          I tuoi dati
+        </h2>
+        <div className="space-y-2">
+          <DataButton
+            icon={<Download className="size-4" />}
+            label="Esporta in CSV"
+            hint="Una riga per serie — si apre in Excel, Numbers o Fogli Google"
+            disabled={!history.length}
+            onClick={() => exportCsv(history)}
+          />
+          <DataButton
+            icon={<Download className="size-4" />}
+            label="Esporta backup (.json)"
+            hint="Tutto lo stato, pesi correnti compresi. Si reimporta identico"
+            disabled={!history.length}
+            onClick={() => exportJson(state)}
+          />
+          <DataButton
+            icon={<Upload className="size-4" />}
+            label="Importa backup"
+            hint="Sostituisce i dati di questo dispositivo"
+            onClick={() => fileRef.current?.click()}
+          />
+        </div>
+        <input
+          ref={fileRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onImport(f);
+            e.target.value = "";
+          }}
+        />
+
         <button
           onClick={() => {
-            if (window.confirm("Ripristinare i dati dimostrativi? Lo storico verrà sostituito.")) {
+            if (window.confirm("Cancellare storico e riportare i pesi ai valori della scheda?")) {
               resetAll();
             }
           }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border border-border py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl border border-border py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"
         >
           <RotateCcw className="size-4" />
-          Reimposta dati
+          Cancella tutto
         </button>
         <p className="mt-3 text-center text-[11px] text-muted-foreground">
-          I dati restano salvati solo su questo dispositivo.
+          I dati restano salvati solo su questo dispositivo. Esporta un backup ogni tanto.
         </p>
       </section>
     </AppShell>
+  );
+}
+
+function DataButton({
+  icon,
+  label,
+  hint,
+  onClick,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  hint: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="flex w-full items-center gap-3 rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border"
+    >
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-secondary text-muted-foreground">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-bold">{label}</span>
+        <span className="block text-[11px] leading-tight text-muted-foreground">{hint}</span>
+      </span>
+    </button>
   );
 }
 

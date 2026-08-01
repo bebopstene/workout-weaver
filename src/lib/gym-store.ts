@@ -348,6 +348,27 @@ export function resetAll() {
   setState(emptyState());
 }
 
+/**
+ * Rimpiazza lo stato con un backup importato.
+ * Torna un messaggio d'errore se il file non è uno stato di questa app:
+ * meglio rifiutare che sovrascrivere lo storico con qualcosa di illeggibile.
+ */
+export function importState(raw: unknown): string | null {
+  if (!raw || typeof raw !== "object") return "Il file non contiene dati leggibili.";
+  const data = raw as Partial<GymState>;
+  if (!data.plan || typeof data.plan !== "object")
+    return "Manca la scheda: non sembra un backup di questa app.";
+  if (data.history && !Array.isArray(data.history)) return "Lo storico nel file è danneggiato.";
+  const base = emptyState();
+  setState({
+    active: data.active ?? null,
+    history: data.history ?? [],
+    plan: { ...base.plan, ...data.plan },
+    proposals: [],
+  });
+  return null;
+}
+
 /* ==================== statistiche ==================== */
 
 export const sessionVolume = (s: Session) =>
