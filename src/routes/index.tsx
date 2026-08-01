@@ -6,8 +6,10 @@ import { ExerciseCard } from "@/components/ExerciseCard";
 import { RestTimer } from "@/components/RestTimer";
 import { VolumeChart } from "@/components/VolumeChart";
 import {
-  TEMPLATES,
+  PLAN,
+  applyProposals,
   discardSession,
+  dismissProposals,
   doneSets,
   finishSession,
   fmtDuration,
@@ -20,6 +22,7 @@ import {
   weeklyDelta,
   weeklyVolume,
 } from "@/lib/gym-store";
+import { ProgressionSheet } from "@/components/ProgressionSheet";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -41,7 +44,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { active, history } = useGym();
+  const { active, history, proposals } = useGym();
   const [rest, setRest] = useState<{ seconds: number; key: number } | null>(null);
   const [elapsed, setElapsed] = useState(0);
 
@@ -70,18 +73,28 @@ function Index() {
     return (
       <AppShell>
         <header className="px-4 pt-8">
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-accent">Iron Pulse</p>
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-accent">
+            Iron Pulse
+          </p>
           <h1 className="mt-1 font-display text-3xl leading-none">Pronto ad allenarti</h1>
         </header>
 
         <div className="mt-6 grid grid-cols-3 gap-2 px-4">
-          <Stat icon={<Flame className="size-3.5" />} label="Streak" value={`${streak(history)}g`} />
+          <Stat
+            icon={<Flame className="size-3.5" />}
+            label="Streak"
+            value={`${streak(history)}g`}
+          />
           <Stat
             icon={<Zap className="size-3.5" />}
             label="Vol. sett."
             value={`${Math.round(week / 1000)}t`}
           />
-          <Stat icon={<Trophy className="size-3.5" />} label="Sessioni" value={`${history.length}`} />
+          <Stat
+            icon={<Trophy className="size-3.5" />}
+            label="Sessioni"
+            value={`${history.length}`}
+          />
         </div>
 
         <div className="mt-8 px-4">
@@ -93,26 +106,37 @@ function Index() {
             Scegli la scheda
           </h2>
           <div className="space-y-2">
-            {TEMPLATES.map((t, i) => (
+            {PLAN.map((day) => (
               <button
-                key={t.name}
-                onClick={() => startSession(i)}
+                key={day.id}
+                onClick={() => startSession(day.id)}
                 className="group flex w-full items-center gap-3 rounded-xl border border-border bg-card p-4 text-left transition-colors hover:border-accent"
               >
-                <span className="font-display text-2xl text-muted-foreground transition-colors group-hover:text-accent">
-                  {String(i + 1).padStart(2, "0")}
+                <span
+                  className="flex size-10 shrink-0 items-center justify-center rounded-lg text-xl"
+                  style={{ backgroundColor: `${day.color}1f` }}
+                >
+                  {day.emoji}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate font-bold">{t.name}</span>
+                  <span className="block truncate font-bold">{day.name}</span>
                   <span className="block text-xs text-muted-foreground">
-                    {t.exercises.length} esercizi ·{" "}
-                    {t.exercises.reduce((s, e) => s + e.sets, 0)} serie
+                    {day.exercises.length} esercizi ·{" "}
+                    {day.exercises.reduce((s, e) => s + e.sets, 0)} serie
                   </span>
                 </span>
               </button>
             ))}
           </div>
         </div>
+
+        {proposals.length > 0 && (
+          <ProgressionSheet
+            proposals={proposals}
+            onApply={applyProposals}
+            onDismiss={dismissProposals}
+          />
+        )}
       </AppShell>
     );
   }
@@ -125,7 +149,9 @@ function Index() {
     <AppShell
       footer={
         <>
-          {rest && <RestTimer key={rest.key} seconds={rest.seconds} onDismiss={() => setRest(null)} />}
+          {rest && (
+            <RestTimer key={rest.key} seconds={rest.seconds} onDismiss={() => setRest(null)} />
+          )}
           <div className="flex gap-2 border-b border-border px-4 py-3">
             <button
               onClick={() => {
@@ -152,7 +178,9 @@ function Index() {
       <header className="sticky top-0 z-30 border-b border-border bg-background/85 px-4 py-4 backdrop-blur-xl">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-accent">In corso</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-accent">
+              In corso
+            </p>
             <h1 className="truncate font-display text-xl leading-tight">{active.name}</h1>
           </div>
           <div className="text-right">
