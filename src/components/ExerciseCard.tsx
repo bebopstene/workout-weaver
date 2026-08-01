@@ -1,5 +1,5 @@
 import { Check, Minus, Plus, Trash2 } from "lucide-react";
-import { addSet, removeSet, updateSet, type Exercise } from "@/lib/gym-store";
+import { addSet, removeSet, setExerciseWeight, updateSet, type Exercise } from "@/lib/gym-store";
 
 function NumberField({
   label,
@@ -17,7 +17,9 @@ function NumberField({
   emphasis: boolean;
 }) {
   return (
-    <div className={`rounded-lg px-2 py-1 ${emphasis ? "bg-accent-foreground/15" : "bg-background/40"}`}>
+    <div
+      className={`rounded-lg px-2 py-1 ${emphasis ? "bg-accent-foreground/15" : "bg-background/40"}`}
+    >
       <div
         className={`text-[10px] font-bold uppercase ${
           emphasis ? "text-accent-foreground/70" : "text-muted-foreground"
@@ -95,16 +97,25 @@ export function ExerciseCard({
                   <span className="text-xs font-bold text-accent">{i + 1}</span>
                 </div>
                 <div className="grid min-w-0 flex-1 grid-cols-2 gap-4">
-                  <div>
-                    <div className="text-[10px] font-bold uppercase text-muted-foreground">Peso</div>
-                    <div className="font-display">
-                      {set.weight}
-                      <span className="ml-1 font-sans text-[10px] text-muted-foreground">KG</span>
+                  {!exercise.timed && (
+                    <div>
+                      <div className="text-[10px] font-bold uppercase text-muted-foreground">
+                        Peso
+                      </div>
+                      <div className="font-display">
+                        {set.weight}
+                        <span className="ml-1 font-sans text-[10px] text-muted-foreground">KG</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <div>
-                    <div className="text-[10px] font-bold uppercase text-muted-foreground">Reps</div>
-                    <div className="font-display text-accent">{set.reps}</div>
+                    <div className="text-[10px] font-bold uppercase text-muted-foreground">
+                      {exercise.timed ? "Tenuta" : "Reps"}
+                    </div>
+                    <div className="font-display text-accent">
+                      {set.reps}
+                      {exercise.timed && "s"}
+                    </div>
                   </div>
                 </div>
                 <button
@@ -127,19 +138,24 @@ export function ExerciseCard({
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-background">
                   <span className="text-xs font-bold text-accent">{i + 1}</span>
                 </div>
-                <div className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+                <div
+                  className={`grid min-w-0 flex-1 gap-2 ${exercise.timed ? "grid-cols-1" : "grid-cols-2"}`}
+                >
+                  {!exercise.timed && (
+                    <NumberField
+                      label="Peso"
+                      value={set.weight}
+                      step={2.5}
+                      suffix="kg"
+                      emphasis
+                      onChange={(v) => setExerciseWeight(exercise.id, v)}
+                    />
+                  )}
                   <NumberField
-                    label="Peso"
-                    value={set.weight}
-                    step={2.5}
-                    suffix="kg"
-                    emphasis
-                    onChange={(v) => updateSet(exercise.id, set.id, { weight: v })}
-                  />
-                  <NumberField
-                    label="Reps"
+                    label={exercise.timed ? "Secondi" : "Reps"}
                     value={set.reps}
-                    step={1}
+                    step={exercise.timed ? 5 : 1}
+                    suffix={`obiettivo ${exercise.targetReps}`}
                     emphasis
                     onChange={(v) => updateSet(exercise.id, set.id, { reps: v })}
                   />
@@ -167,7 +183,9 @@ export function ExerciseCard({
                 <span className="text-xs font-bold text-muted-foreground">{i + 1}</span>
               </div>
               <div className="min-w-0 flex-1 truncate text-sm italic text-muted-foreground">
-                Target: {set.weight} kg × {exercise.targetReps}
+                {exercise.timed
+                  ? `Obiettivo: ${exercise.targetReps}`
+                  : `Obiettivo: ${set.weight} kg × ${exercise.targetReps}`}
               </div>
               <button
                 aria-label="Elimina serie"
