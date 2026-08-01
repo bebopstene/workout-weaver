@@ -22,7 +22,7 @@ export const Route = createFileRoute("/progressi")({
       { property: "og:description", content: "Volume, andamento del carico e record personali." },
     ],
   }),
-  component: Progressi;
+  component: Progressi,
 });
 
 function Progressi() {
