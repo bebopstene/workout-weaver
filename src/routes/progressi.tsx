@@ -49,12 +49,12 @@ function Progressi() {
         <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
           Volume per sessione
         </h2>
-        <div className="flex h-24 items-end gap-1.5">
+        <div className="flex items-end gap-1.5">
           {recent.map((s) => (
-            <div key={s.id} className="flex min-w-0 flex-1 flex-col items-center gap-1">
+            <div key={s.id} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
               <div
                 className="w-full rounded-sm bg-accent/70"
-                style={{ height: `${Math.max(6, (sessionVolume(s) / max) * 100)}%` }}
+                style={{ height: `${Math.max(6, Math.round((sessionVolume(s) / max) * 96))}px` }}
                 title={`${fmtNum(sessionVolume(s))} kg`}
               />
               <span className="truncate text-[8px] font-bold uppercase text-muted-foreground">
