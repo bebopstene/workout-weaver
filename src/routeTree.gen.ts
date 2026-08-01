@@ -10,33 +10,63 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ProfiloRouteImport } from './routes/profilo'
+import { Route as ProgressiRouteImport } from './routes/progressi'
+import { Route as StoricoRouteImport } from './routes/storico'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfiloRoute = ProfiloRouteImport.update({
+  id: '/profilo',
+  path: '/profilo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProgressiRoute = ProgressiRouteImport.update({
+  id: '/progressi',
+  path: '/progressi',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoricoRoute = StoricoRouteImport.update({
+  id: '/storico',
+  path: '/storico',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/profilo': typeof ProfiloRoute
+  '/progressi': typeof ProgressiRoute
+  '/storico': typeof StoricoRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/profilo': typeof ProfiloRoute
+  '/progressi': typeof ProgressiRoute
+  '/storico': typeof StoricoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/profilo': typeof ProfiloRoute
+  '/progressi': typeof ProgressiRoute
+  '/storico': typeof StoricoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/profilo' | '/progressi' | '/storico'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/profilo' | '/progressi' | '/storico'
+  id: '__root__' | '/' | '/profilo' | '/progressi' | '/storico'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ProfiloRoute: typeof ProfiloRoute
+  ProgressiRoute: typeof ProgressiRoute
+  StoricoRoute: typeof StoricoRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +78,36 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profilo': {
+      id: '/profilo'
+      path: '/profilo'
+      fullPath: '/profilo'
+      preLoaderRoute: typeof ProfiloRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/progressi': {
+      id: '/progressi'
+      path: '/progressi'
+      fullPath: '/progressi'
+      preLoaderRoute: typeof ProgressiRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/storico': {
+      id: '/storico'
+      path: '/storico'
+      fullPath: '/storico'
+      preLoaderRoute: typeof StoricoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ProfiloRoute: ProfiloRoute,
+  ProgressiRoute: ProgressiRoute,
+  StoricoRoute: StoricoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
