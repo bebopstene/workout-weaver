@@ -53,7 +53,7 @@ function Progressi() {
           {recent.map((s) => (
             <div key={s.id} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
               <div
-                className="w-full rounded-sm bg-accent/70"
+                className="w-full rounded-sm bg-accent"
                 style={{ height: `${Math.max(6, Math.round((sessionVolume(s) / max) * 96))}px` }}
                 title={`${fmtNum(sessionVolume(s))} kg`}
               />
