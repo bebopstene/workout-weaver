@@ -1,3 +1,5 @@
+import { fmtNum } from "@/lib/gym-store";
+
 type Day = { label: string; volume: number; isToday: boolean };
 
 export function VolumeChart({ days, delta }: { days: Day[]; delta: number | null }) {
@@ -26,7 +28,7 @@ export function VolumeChart({ days, delta }: { days: Day[]; delta: number | null
                 d.isToday ? "bg-accent" : d.volume ? "bg-secondary" : "bg-secondary/30"
               }`}
               style={{ height: `${h}%` }}
-              title={`${d.label}: ${Math.round(d.volume).toLocaleString("it-IT")} kg`}
+              title={`${d.label}: ${fmtNum(d.volume)} kg`}
             />
           );
         })}

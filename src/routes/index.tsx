@@ -11,6 +11,7 @@ import {
   doneSets,
   finishSession,
   fmtDuration,
+  fmtNum,
   sessionVolume,
   startSession,
   streak,
@@ -157,7 +158,7 @@ function Index() {
           <div className="text-right">
             <div className="font-display text-xl leading-none">{fmtDuration(elapsed)}</div>
             <div className="text-[10px] font-bold uppercase text-muted-foreground">
-              {Math.round(sessionVolume(active)).toLocaleString("it-IT")} kg
+              {fmtNum(sessionVolume(active))} kg
             </div>
           </div>
         </div>

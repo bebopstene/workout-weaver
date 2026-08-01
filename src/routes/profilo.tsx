@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Dumbbell, RotateCcw, Timer, TrendingUp } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { doneSets, personalRecords, resetAll, sessionVolume, streak, useGym } from "@/lib/gym-store";
+import { doneSets, fmtNum, personalRecords, resetAll, sessionVolume, streak, useGym } from "@/lib/gym-store";
 
 export const Route = createFileRoute("/profilo")({
   head: () => ({
@@ -39,7 +39,7 @@ function Profilo() {
         <Tile
           icon={<TrendingUp className="size-4" />}
           label="Volume totale"
-          value={`${Math.round(volume / 1000).toLocaleString("it-IT")} t`}
+          value={`${fmtNum(volume / 1000)} t`}
         />
         <Tile icon={<Dumbbell className="size-4" />} label="Serie totali" value={`${sets}`} />
         <Tile

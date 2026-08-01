@@ -3,6 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { VolumeChart } from "@/components/VolumeChart";
 import {
   fmtDate,
+  fmtNum,
   personalRecords,
   sessionVolume,
   useGym,
@@ -54,7 +55,7 @@ function Progressi() {
               <div
                 className="w-full rounded-sm bg-accent/70"
                 style={{ height: `${Math.max(6, (sessionVolume(s) / max) * 100)}%` }}
-                title={`${Math.round(sessionVolume(s)).toLocaleString("it-IT")} kg`}
+                title={`${fmtNum(sessionVolume(s))} kg`}
               />
               <span className="truncate text-[8px] font-bold uppercase text-muted-foreground">
                 {fmtDate(s.date)}

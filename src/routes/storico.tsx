@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CalendarDays, Clock, Layers } from "lucide-react";
 import { AppShell } from "@/components/AppShell";
-import { doneSets, fmtDate, sessionVolume, useGym } from "@/lib/gym-store";
+import { doneSets, fmtDate, fmtNum, sessionVolume, useGym } from "@/lib/gym-store";
 
 export const Route = createFileRoute("/storico")({
   head: () => ({
@@ -46,7 +46,7 @@ function Storico() {
               </div>
               <dl className="mt-3 grid grid-cols-3 gap-2">
                 <Metric icon={<Layers className="size-3" />} label="Volume">
-                  {Math.round(sessionVolume(s)).toLocaleString("it-IT")} kg
+                  {fmtNum(sessionVolume(s))} kg
                 </Metric>
                 <Metric icon={<CalendarDays className="size-3" />} label="Serie">
                   {doneSets(s)}
