@@ -339,6 +339,18 @@ export function discardSession() {
   setState({ ...state, active: null });
 }
 
+/**
+ * Elimina una sessione dallo storico.
+ *
+ * Non tocca i pesi correnti: se l'allenamento aveva fatto salire un carico,
+ * quello resta dov'è. Cancellare una sessione registrata per sbaglio non deve
+ * far regredire la progressione di settimane, e il peso resta comunque
+ * modificabile a mano durante l'allenamento.
+ */
+export function deleteSession(id: string) {
+  setState({ ...state, history: state.history.filter((s) => s.id !== id) });
+}
+
 /** Riporta i pesi ai valori della scheda. Lo storico resta. */
 export function resetPlan() {
   setState({ ...state, plan: emptyState().plan });
