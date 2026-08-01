@@ -74,7 +74,7 @@ function daysAgo(n: number) {
 }
 
 function seedSession(templateIndex: number, days: number, factor: number): Session {
-  const t = TEMPLATES[templateIndex];
+  const t = TEMPLATES[templateIndex]!;
   const date = daysAgo(days);
   return {
     id: uid(),
@@ -164,7 +164,7 @@ export function useGym() {
 }
 
 export function startSession(templateIndex: number) {
-  const t = TEMPLATES[templateIndex];
+  const t = TEMPLATES[templateIndex]!;
   const prev = state.history[0];
   const session: Session = {
     id: uid(),
@@ -294,7 +294,7 @@ export function weeklyVolume(history: Session[], active: Session | null) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     return {
-      label: ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"][i],
+      label: ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"][i]!,
       date: d,
       volume: 0,
       isToday: i === dow,
@@ -305,7 +305,7 @@ export function weeklyVolume(history: Session[], active: Session | null) {
   for (const s of all) {
     const d = new Date(s.date);
     const idx = days.findIndex((x) => x.date.toDateString() === d.toDateString());
-    if (idx >= 0) days[idx].volume += sessionVolume(s);
+    if (idx >= 0) days[idx]!.volume += sessionVolume(s);
   }
   return days;
 }
