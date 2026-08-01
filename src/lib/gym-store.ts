@@ -346,5 +346,15 @@ export const fmtDuration = (ms: number) => {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 };
 
-export const fmtDate = (iso: string) =>
-  new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
+const MONTHS = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
+
+/** Locale-independent so SSR and client render identically. */
+export const fmtDate = (iso: string) => {
+  const d = new Date(iso);
+  return `${String(d.getDate()).padStart(2, "0")} ${MONTHS[d.getMonth()]}`;
+};
+
+export const fmtNum = (n: number) =>
+  Math.round(n)
+    .toString()
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
