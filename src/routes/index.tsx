@@ -23,6 +23,7 @@ import {
   weeklyVolume,
 } from "@/lib/gym-store";
 import { ProgressionSheet } from "@/components/ProgressionSheet";
+import { StretchingSheet } from "@/components/StretchingSheet";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,9 +45,17 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { active, history, proposals } = useGym();
+  const { active, history, proposals, stretching } = useGym();
   const [rest, setRest] = useState<{ seconds: number; key: number } | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  /** Il defaticamento si apre fra "Termina allenamento" e il salvataggio. */
+  const [cooldown, setCooldown] = useState(false);
+
+  const closeWorkout = (stretchIds: string[]) => {
+    finishSession(stretchIds);
+    setCooldown(false);
+    setRest(null);
+  };
 
   useEffect(() => {
     if (!active) return;
@@ -163,10 +172,7 @@ function Index() {
               Annulla
             </button>
             <button
-              onClick={() => {
-                finishSession();
-                setRest(null);
-              }}
+              onClick={() => setCooldown(true)}
               className="flex-1 rounded-lg bg-accent py-3 text-sm font-bold uppercase tracking-wider text-accent-foreground transition-transform active:scale-[0.98]"
             >
               Termina allenamento
@@ -211,6 +217,16 @@ function Index() {
           />
         ))}
       </div>
+
+      {cooldown && (
+        <StretchingSheet
+          dayId={active.dayId}
+          dayName={active.name}
+          stretches={stretching[active.dayId] ?? []}
+          onSkip={() => closeWorkout([])}
+          onDone={closeWorkout}
+        />
+      )}
     </AppShell>
   );
 }
