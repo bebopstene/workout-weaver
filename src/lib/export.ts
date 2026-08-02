@@ -1,5 +1,6 @@
-import { findExercise } from "@/lib/plan";
+import type { DayDef } from "@/lib/plan";
 import type { GymState, Session } from "@/lib/gym-store";
+import { programToCsv } from "@/lib/program";
 
 /**
  * Esportazione dei dati in due formati, con scopi diversi.
@@ -38,14 +39,20 @@ const COLUMNS = [
   "Volume (kg)",
 ];
 
-/** Una riga per serie completata, dalla più recente alla più vecchia. */
-export function historyToCsv(history: Session[]): string {
+/**
+ * Una riga per serie completata, dalla più recente alla più vecchia.
+ * L'attrezzo viene letto dalla scheda corrente: se un esercizio è stato
+ * rimosso da allora, la colonna resta vuota invece di far saltare la riga.
+ */
+export function historyToCsv(history: Session[], program: DayDef[] = []): string {
   const rows: string[] = [COLUMNS.join(",")];
 
   for (const s of [...history].sort((a, b) => +new Date(a.date) - +new Date(b.date))) {
     const d = new Date(s.date);
     for (const e of s.exercises) {
-      const def = findExercise(s.dayId, e.defId);
+      const def = program
+        .find((day) => day.id === s.dayId)
+        ?.exercises.find((x) => x.id === e.defId);
       let n = 0;
       for (const set of e.sets) {
         if (!set.done) continue;
@@ -86,8 +93,12 @@ export function download(filename: string, content: string, mime: string) {
 
 const stamp = () => iso(new Date());
 
-export function exportCsv(history: Session[]) {
-  download(`allenamenti-${stamp()}.csv`, historyToCsv(history), "text/csv");
+export function exportCsv(history: Session[], program: DayDef[]) {
+  download(`allenamenti-${stamp()}.csv`, historyToCsv(history, program), "text/csv");
+}
+
+export function exportProgramCsv(program: DayDef[], plan: GymState["plan"]) {
+  download(`scheda-${stamp()}.csv`, programToCsv(program, plan), "text/csv");
 }
 
 export function exportJson(state: GymState) {
@@ -95,4 +106,3 @@ export function exportJson(state: GymState) {
   const { proposals: _proposals, ...rest } = state;
   download(`backup-allenamenti-${stamp()}.json`, JSON.stringify(rest, null, 1), "application/json");
 }
-

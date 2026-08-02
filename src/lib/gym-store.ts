@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { PLAN, findDay, findExercise, planKey, targetLabel, type ExerciseDef } from "@/lib/plan";
+import { PLAN, planKey, targetLabel, type DayDef, type ExerciseDef } from "@/lib/plan";
 import { defaultStretches, type Stretch } from "@/lib/stretching";
 
 export type WorkoutSet = {
@@ -63,6 +63,8 @@ export type GymState = {
   proposals: Proposal[];
   /** Defaticamento per giornata, modificabile dall'app. */
   stretching: Record<string, Stretch[]>;
+  /** La scheda. Non è più una costante: si sostituisce importando un CSV. */
+  program: DayDef[];
 };
 
 const KEY = "iron-pulse-state-v1";
@@ -71,10 +73,14 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-/** Scheda al valore di partenza: nessuno storico, nessun dato inventato. */
-export function emptyState(): GymState {
+/** Copia profonda: la scheda di partenza non deve essere mutata da chi la modifica. */
+const cloneProgram = (days: DayDef[]): DayDef[] =>
+  days.map((d) => ({ ...d, exercises: d.exercises.map((e) => ({ ...e })) }));
+
+/** Stato di progressione dedotto da una scheda, ai valori di partenza. */
+export function planFromProgram(days: DayDef[]): Record<string, PlanState> {
   const plan: Record<string, PlanState> = {};
-  for (const day of PLAN) {
+  for (const day of days) {
     for (const e of day.exercises) {
       plan[planKey(day.id, e.id)] = {
         weight: e.weight,
@@ -84,8 +90,25 @@ export function emptyState(): GymState {
       };
     }
   }
-  return { active: null, history: [], plan, proposals: [], stretching: defaultStretches() };
+  return plan;
 }
+
+/** Scheda al valore di partenza: nessuno storico, nessun dato inventato. */
+export function emptyState(): GymState {
+  const program = cloneProgram(PLAN);
+  return {
+    active: null,
+    history: [],
+    plan: planFromProgram(program),
+    proposals: [],
+    stretching: defaultStretches(),
+    program,
+  };
+}
+
+const findDayIn = (days: DayDef[], dayId: string) => days.find((d) => d.id === dayId);
+const findExerciseIn = (days: DayDef[], dayId: string, exId: string) =>
+  findDayIn(days, dayId)?.exercises.find((e) => e.id === exId);
 
 let state: GymState = emptyState();
 let hydrated = false;
@@ -122,6 +145,9 @@ export function hydrate() {
         // Una giornata mai personalizzata usa il defaticamento predefinito;
         // quelle già modificate mantengono la versione dell'utente.
         stretching: { ...base.stretching, ...(stored.stretching ?? {}) },
+        // Chi ha dati salvati prima che la scheda diventasse modificabile
+        // non ha `program`: riceve quella predefinita.
+        program: stored.program?.length ? stored.program : base.program,
       };
     }
   } catch {
@@ -149,7 +175,7 @@ export function useGym() {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
 }
 
-export { PLAN, targetLabel } from "@/lib/plan";
+export { targetLabel } from "@/lib/plan";
 
 /* ==================== sessione ==================== */
 
@@ -184,7 +210,7 @@ function buildExercise(dayId: string, def: ExerciseDef, plan: Record<string, Pla
 }
 
 export function startSession(dayId: string) {
-  const day = findDay(dayId);
+  const day = findDayIn(state.program, dayId);
   if (!day) return;
   const session: Session = {
     id: uid(),
@@ -260,10 +286,11 @@ export function removeSet(exerciseId: string, setId: string) {
 export function progressionProposals(
   session: Session,
   plan: Record<string, PlanState>,
+  program: DayDef[] = state.program,
 ): Proposal[] {
   const out: Proposal[] = [];
   for (const e of session.exercises) {
-    const def = findExercise(session.dayId, e.defId);
+    const def = findExerciseIn(program, session.dayId, e.defId);
     if (!def) continue;
     const key = planKey(session.dayId, e.defId);
     const cur = plan[key];
@@ -362,6 +389,32 @@ export function removeStretch(dayId: string, id: string) {
   mapStretches(dayId, (list) => list.filter((s) => s.id !== id));
 }
 
+/* ==================== scheda ==================== */
+
+/**
+ * Sostituisce la scheda con quella importata.
+ *
+ * I pesi arrivano dal CSV: è il file che l'utente ha appena rivisto, quindi è
+ * lui la fonte di verità, non lo stato precedente. Lo storico resta intatto —
+ * le sessioni già registrate portano dentro i propri dati e non dipendono
+ * dalla scheda corrente.
+ */
+export function importProgram(days: DayDef[], weights: Record<string, number>) {
+  const plan = planFromProgram(days);
+  for (const [key, weight] of Object.entries(weights)) {
+    if (plan[key]) plan[key] = { ...plan[key], weight };
+  }
+  const stretching = { ...state.stretching };
+  for (const d of days) if (!stretching[d.id]) stretching[d.id] = [];
+  setState({ ...state, program: cloneProgram(days), plan, stretching, proposals: [] });
+}
+
+/** Riporta la scheda e i pesi ai valori originali. Lo storico resta. */
+export function resetProgram() {
+  const program = cloneProgram(PLAN);
+  setState({ ...state, program, plan: planFromProgram(program), proposals: [] });
+}
+
 /** Riporta il defaticamento della giornata alla versione predefinita. */
 export function resetStretches(dayId: string) {
   const base = emptyState().stretching[dayId] ?? [];
@@ -427,6 +480,7 @@ export function importState(raw: unknown): string | null {
     // Un backup fatto prima del defaticamento non lo contiene: si riparte
     // dai predefiniti invece di lasciare l'utente senza allungamenti.
     stretching: { ...base.stretching, ...(data.stretching ?? {}) },
+    program: data.program?.length ? data.program : base.program,
   });
   return null;
 }

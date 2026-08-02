@@ -6,7 +6,6 @@ import { ExerciseCard } from "@/components/ExerciseCard";
 import { RestTimer } from "@/components/RestTimer";
 import { VolumeChart } from "@/components/VolumeChart";
 import {
-  PLAN,
   applyProposals,
   discardSession,
   dismissProposals,
@@ -45,7 +44,7 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
-  const { active, history, proposals, stretching } = useGym();
+  const { active, history, proposals, stretching, program } = useGym();
   const [rest, setRest] = useState<{ seconds: number; key: number } | null>(null);
   const [elapsed, setElapsed] = useState(0);
   /** Il defaticamento si apre fra "Termina allenamento" e il salvataggio. */
@@ -115,7 +114,7 @@ function Index() {
             Scegli la scheda
           </h2>
           <div className="space-y-2">
-            {PLAN.map((day) => (
+            {program.map((day) => (
               <button
                 key={day.id}
                 onClick={() => startSession(day.id)}
@@ -130,7 +129,7 @@ function Index() {
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-bold">{day.name}</span>
                   <span className="block text-xs text-muted-foreground">
-                    {day.exercises.length} esercizi ·{" "}
+                    {day.exercises.length} {day.exercises.length === 1 ? "esercizio" : "esercizi"} ·{" "}
                     {day.exercises.reduce((s, e) => s + e.sets, 0)} serie
                   </span>
                 </span>
