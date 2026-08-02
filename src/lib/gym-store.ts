@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { PLAN, findDay, findExercise, planKey, targetLabel, type ExerciseDef } from "@/lib/plan";
+import { defaultStretches, type Stretch } from "@/lib/stretching";
 
 export type WorkoutSet = {
   id: string;
@@ -24,6 +25,9 @@ export type Exercise = {
   sets: WorkoutSet[];
 };
 
+/** Allungamento come risulta nello storico: nome e durata al momento in cui è stato fatto. */
+export type DoneStretch = { id: string; name: string; seconds: number };
+
 export type Session = {
   id: string;
   dayId: string;
@@ -32,6 +36,7 @@ export type Session = {
   startedAt: number;
   finishedAt?: number;
   exercises: Exercise[];
+  stretches?: DoneStretch[];
 };
 
 /** Stato corrente di un esercizio: è ciò che la double progression fa salire. */
@@ -56,6 +61,8 @@ export type GymState = {
   plan: Record<string, PlanState>;
   /** Aumenti proposti a fine sessione, in attesa di conferma. */
   proposals: Proposal[];
+  /** Defaticamento per giornata, modificabile dall'app. */
+  stretching: Record<string, Stretch[]>;
 };
 
 const KEY = "iron-pulse-state-v1";
@@ -77,7 +84,7 @@ export function emptyState(): GymState {
       };
     }
   }
-  return { active: null, history: [], plan, proposals: [] };
+  return { active: null, history: [], plan, proposals: [], stretching: defaultStretches() };
 }
 
 let state: GymState = emptyState();
@@ -112,6 +119,9 @@ export function hydrate() {
         // deve comunque comparire: per questo si parte dai valori base.
         plan: { ...base.plan, ...(stored.plan ?? {}) },
         proposals: stored.proposals ?? [],
+        // Una giornata mai personalizzata usa il defaticamento predefinito;
+        // quelle già modificate mantengono la versione dell'utente.
+        stretching: { ...base.stretching, ...(stored.stretching ?? {}) },
       };
     }
   } catch {
@@ -300,25 +310,62 @@ export function progressionProposals(
   return out;
 }
 
-export function finishSession() {
+/** `stretchIds` sono gli allungamenti effettivamente completati nel defaticamento. */
+export function finishSession(stretchIds: string[] = []) {
   if (!state.active) return;
+  const chosen = new Set(stretchIds);
+  const stretches = (state.stretching[state.active.dayId] ?? [])
+    .filter((s) => chosen.has(s.id))
+    .map((s) => ({ id: s.id, name: s.name, seconds: s.seconds }));
+
   const done: Session = {
     ...state.active,
     finishedAt: Date.now(),
     exercises: state.active.exercises
       .map((e) => ({ ...e, sets: e.sets.filter((s) => s.done) }))
       .filter((e) => e.sets.length > 0),
+    ...(stretches.length ? { stretches } : {}),
   };
   if (!done.exercises.length) {
     setState({ ...state, active: null, proposals: [] });
     return;
   }
   setState({
+    ...state,
     active: null,
     history: [done, ...state.history],
-    plan: state.plan,
     proposals: progressionProposals(state.active, state.plan),
   });
+}
+
+/* ==================== defaticamento ==================== */
+
+function mapStretches(dayId: string, fn: (list: Stretch[]) => Stretch[]) {
+  setState({
+    ...state,
+    stretching: { ...state.stretching, [dayId]: fn(state.stretching[dayId] ?? []) },
+  });
+}
+
+export function updateStretch(dayId: string, id: string, patch: Partial<Stretch>) {
+  mapStretches(dayId, (list) => list.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+}
+
+export function addStretch(dayId: string) {
+  mapStretches(dayId, (list) => [
+    ...list,
+    { id: uid(), name: "Nuovo allungamento", seconds: 30, target: "" },
+  ]);
+}
+
+export function removeStretch(dayId: string, id: string) {
+  mapStretches(dayId, (list) => list.filter((s) => s.id !== id));
+}
+
+/** Riporta il defaticamento della giornata alla versione predefinita. */
+export function resetStretches(dayId: string) {
+  const base = emptyState().stretching[dayId] ?? [];
+  setState({ ...state, stretching: { ...state.stretching, [dayId]: base } });
 }
 
 /** Applica gli aumenti scelti. `keys` vuoto = salva senza cambiare i pesi. */
@@ -377,6 +424,9 @@ export function importState(raw: unknown): string | null {
     history: data.history ?? [],
     plan: { ...base.plan, ...data.plan },
     proposals: [],
+    // Un backup fatto prima del defaticamento non lo contiene: si riparte
+    // dai predefiniti invece di lasciare l'utente senza allungamenti.
+    stretching: { ...base.stretching, ...(data.stretching ?? {}) },
   });
   return null;
 }
