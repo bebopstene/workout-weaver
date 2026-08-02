@@ -12,7 +12,9 @@ import {
   streak,
   useGym,
 } from "@/lib/gym-store";
-import { exportCsv, exportJson } from "@/lib/export";
+import { exportCsv, exportJson, exportProgramCsv } from "@/lib/export";
+import { parseProgramCsv } from "@/lib/program";
+import { importProgram, resetProgram } from "@/lib/gym-store";
 
 export const Route = createFileRoute("/profilo")({
   head: () => ({
@@ -34,7 +36,29 @@ function Profilo() {
   const state = useGym();
   const { history } = state;
   const fileRef = useRef<HTMLInputElement>(null);
+  const csvRef = useRef<HTMLInputElement>(null);
   const volume = history.reduce((t, s) => t + sessionVolume(s), 0);
+
+  const onImportProgram = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = parseProgramCsv(String(reader.result));
+      if (!result.ok) {
+        window.alert(`Scheda non importata.\n\n${result.error}`);
+        return;
+      }
+      const esercizi = result.days.reduce((n, d) => n + d.exercises.length, 0);
+      if (
+        !window.confirm(
+          `Sostituisco la scheda con ${result.days.length} giornate e ${esercizi} esercizi?\n\nLo storico degli allenamenti resta intatto.`,
+        )
+      )
+        return;
+      importProgram(result.days, result.weights);
+      window.alert("Scheda importata.");
+    };
+    reader.readAsText(file);
+  };
 
   const onImport = (file: File) => {
     const reader = new FileReader();
@@ -115,7 +139,7 @@ function Profilo() {
             label="Esporta in CSV"
             hint="Una riga per serie — si apre in Excel, Numbers o Fogli Google"
             disabled={!history.length}
-            onClick={() => exportCsv(history)}
+            onClick={() => exportCsv(history, state.program)}
           />
           <DataButton
             icon={<Download className="size-4" />}
@@ -142,6 +166,52 @@ function Profilo() {
             e.target.value = "";
           }}
         />
+
+        <h2 className="mb-3 mt-8 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+          La tua scheda
+        </h2>
+        <div className="space-y-2">
+          <DataButton
+            icon={<Download className="size-4" />}
+            label="Esporta scheda (CSV)"
+            hint={`${state.program.length} giornate · esporta i pesi attuali, non quelli iniziali`}
+            onClick={() => exportProgramCsv(state.program, state.plan)}
+          />
+          <DataButton
+            icon={<Upload className="size-4" />}
+            label="Importa scheda (CSV)"
+            hint="Sostituisce esercizi, serie, range e recuperi. Lo storico resta"
+            onClick={() => csvRef.current?.click()}
+          />
+        </div>
+        <input
+          ref={csvRef}
+          type="file"
+          accept="text/csv,.csv"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) onImportProgram(f);
+            e.target.value = "";
+          }}
+        />
+        <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
+          Esporta, modifica il file in un foglio di calcolo e reimporta. Per gli esercizi a tempo
+          compila <b>Secondi</b> e lascia vuoto il range di ripetizioni. Se una riga non torna,
+          l'import si ferma e ti dice quale.
+        </p>
+        <button
+          onClick={() => {
+            if (
+              window.confirm("Riporto la scheda e i pesi ai valori originali? Lo storico resta.")
+            ) {
+              resetProgram();
+            }
+          }}
+          className="mt-3 w-full rounded-lg border border-border py-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground"
+        >
+          Ripristina scheda originale
+        </button>
 
         <button
           onClick={() => {
